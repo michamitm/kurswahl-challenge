@@ -36,6 +36,7 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
 .student-list.over{border-color:var(--accent);background:#eef3ff}
 .student{border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:12px;padding:9px 10px;background:#fff;cursor:grab;user-select:none}
 .student.dragging{opacity:.45}
+.student.selected{outline:3px solid var(--accent);background:var(--soft)}
 .name{font-weight:850}
 .prefrow{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
 .badge{font-size:10px;padding:3px 6px;border-radius:999px;background:#f2f4f7;color:#475467;border:1px solid #e4e7ec}
@@ -67,8 +68,29 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
 .solver-group h4{margin:0 0 8px}
 .solver-name{font-size:12px;color:#d0d5dd;padding:4px 0;border-top:1px solid rgba(255,255,255,.06)}
 .explain{margin-top:14px;color:#d0d5dd;font-size:13px;line-height:1.5}
-@media(max-width:1100px){.layout{grid-template-columns:1fr}.groups{grid-template-columns:1fr 1fr}}
-@media(max-width:700px){.toolbar{grid-template-columns:1fr 1fr}.score{grid-column:auto}.groups{grid-template-columns:1fr}.student-list{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}}
+@media(max-width:1100px){
+  .layout{grid-template-columns:1fr}
+  .groups{grid-template-columns:1fr 1fr}
+}
+@media(max-width:700px){
+  header{padding:18px 14px 8px}
+  .wrap{padding:10px 14px 28px}
+  .toolbar{grid-template-columns:1fr 1fr;gap:8px}
+  .score{padding:11px 12px}
+  .big{font-size:24px}
+  .btn{min-height:48px;padding:10px 12px}
+  .layout{gap:12px}
+  .panel{padding:12px}
+  .course-select{grid-template-columns:1fr 1fr}
+  .student-list{grid-template-columns:1fr}
+  .groups{grid-template-columns:1fr}
+  .group{min-height:170px}
+  .metrics{grid-template-columns:1fr 1fr}
+  .compare{grid-template-columns:1fr}
+  .solver-groups{grid-template-columns:1fr}
+  .student{padding:11px 12px;touch-action:manipulation}
+  .course-btn{min-height:54px}
+}.score{grid-column:auto}.groups{grid-template-columns:1fr}.student-list{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -108,7 +130,7 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
       </div>
       <div class="student-list" id="studentList"></div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px">
-        Bereits zugeordnete Schüler können jederzeit zurück in den Schülerpool gezogen werden.
+        Am PC per Drag & Drop. Auf dem Handy: Schüler antippen und anschließend den Zielkurs antippen. Bereits zugeordnete Schüler können jederzeit zurück in den Schülerpool.
       </div>
     </aside>
 
@@ -198,6 +220,7 @@ const students = [
 let openCourses=[];
 let assign={};
 let dragId=null;
+let selectedStudentId=null;
 
 let timerStarted=false;
 let timerStart=0;
@@ -264,6 +287,14 @@ function studentCard(s){
 
   el.addEventListener("dragstart",()=>{startTimer();dragId=s.id;el.classList.add("dragging")});
   el.addEventListener("dragend",()=>{dragId=null;el.classList.remove("dragging")});
+
+  el.addEventListener("click",()=>{
+    startTimer();
+    selectedStudentId = selectedStudentId===s.id ? null : s.id;
+    render();
+  });
+
+  if(selectedStudentId===s.id) el.classList.add("selected");
   return el;
 }
 
@@ -300,6 +331,17 @@ function initStudentPoolDropZone(){
     if(!dragId) return;
     if(assign[dragId]){
       delete assign[dragId];
+      selectedStudentId=null;
+      render();
+    }
+  });
+
+  pool.addEventListener("click",e=>{
+    if(!selectedStudentId) return;
+    if(e.target.closest(".student")) return;
+    if(assign[selectedStudentId]){
+      delete assign[selectedStudentId];
+      selectedStudentId=null;
       render();
     }
   });
@@ -318,7 +360,18 @@ function buildGroups(){
       const n=Object.values(assign).filter(x=>x===cid).length;
       const old=assign[dragId];
       if(n>=7 && old!==cid)return;
-      assign[dragId]=cid;render();
+      assign[dragId]=cid;selectedStudentId=null;render();
+    });
+
+    box.addEventListener("click",e=>{
+      if(!selectedStudentId)return;
+      if(e.target.closest(".student")) return;
+      const n=Object.values(assign).filter(x=>x===cid).length;
+      const old=assign[selectedStudentId];
+      if(n>=7 && old!==cid)return;
+      assign[selectedStudentId]=cid;
+      selectedStudentId=null;
+      render();
     });
     host.appendChild(box);
   });
