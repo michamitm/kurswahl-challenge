@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kurswahl-Challenge – Mensch vs. Solver</title>
+<style>
+:root{
+  --bg:#f4f6fa;--card:#fff;--text:#172033;--muted:#667085;--line:#d9e0ea;
+  --accent:#2457d6;--soft:#edf2ff;--good:#177245;--bad:#b42318;--shadow:0 10px 28px rgba(18,32,63,.08)
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+header{max-width:1440px;margin:auto;padding:26px 28px 10px}
+h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
+.subtitle{max-width:980px;color:var(--muted);margin-top:8px;line-height:1.5}
+.wrap{max-width:1440px;margin:auto;padding:14px 28px 44px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.toolbar{display:grid;grid-template-columns:1fr 220px auto auto;gap:12px;margin-bottom:16px}
+.score{padding:14px 18px}
+.kicker{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--muted);font-weight:800}
+.big{font-size:32px;font-weight:900;margin-top:3px}
+.btn{border:0;border-radius:13px;padding:0 18px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff}
+.btn.secondary{background:#fff;color:var(--text);border:1px solid var(--line)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:18px}
+.panel{padding:16px}
+.panel h2{margin:0 0 12px;font-size:18px}
+.info{padding:11px 12px;border:1px solid var(--line);background:#f9fbfd;border-radius:12px;font-size:13px;line-height:1.45;margin-bottom:10px}
+.course-select{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.course-btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px;text-align:left;cursor:pointer}
+.course-btn.active{border-color:var(--accent);background:var(--soft)}
+.course-btn b{display:block}
+.course-btn span{font-size:11px;color:var(--muted)}
+.student-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:620px;overflow:auto;padding:8px;border:2px dashed transparent;border-radius:14px;transition:.15s}
+.student-list.over{border-color:var(--accent);background:#eef3ff}
+.student{border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:12px;padding:9px 10px;background:#fff;cursor:grab;user-select:none}
+.student.dragging{opacity:.45}
+.name{font-weight:850}
+.prefrow{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.badge{font-size:10px;padding:3px 6px;border-radius:999px;background:#f2f4f7;color:#475467;border:1px solid #e4e7ec}
+.badge.used{background:var(--soft);color:#2745a5;border-color:#b9c8ff;font-weight:800}
+.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.group{min-height:520px;border:2px dashed #cdd6e3;border-radius:16px;padding:10px;background:#fbfcfe}
+.group.over{border-color:var(--accent);background:#eef3ff}
+.group-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}
+.group-title{font-weight:900}
+.group-meta{font-size:11px;color:var(--muted)}
+.group .student{margin-bottom:8px}
+.capacity{font-size:11px;color:var(--muted)}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:15px}
+.metric{padding:11px;background:#f8fafc;border:1px solid var(--line);border-radius:12px}
+.metric b{display:block;font-size:20px;margin-top:2px}
+.metric span{font-size:11px;color:var(--muted)}
+.message{margin-top:12px;padding:10px 12px;border-radius:11px;font-size:13px;background:#f8fafc;border:1px solid var(--line)}
+.message.good{background:#ecfdf3;border-color:#b7e3c8;color:#17603a}
+.message.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+.result{display:none;margin-top:18px;padding:20px;background:#101828;color:#fff;border-radius:18px}
+.result.show{display:block}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.compare-card{background:#172033;border:1px solid #344054;border-radius:14px;padding:16px}
+.compare-score{font-size:36px;font-weight:900;margin-top:3px}
+.solver-course-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.solver-pill{padding:7px 10px;border-radius:999px;background:#25304a;color:#fff;font-size:12px}
+.solver-groups{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.solver-group{background:#172033;border:1px solid #344054;border-radius:12px;padding:11px}
+.solver-group h4{margin:0 0 8px}
+.solver-name{font-size:12px;color:#d0d5dd;padding:4px 0;border-top:1px solid rgba(255,255,255,.06)}
+.explain{margin-top:14px;color:#d0d5dd;font-size:13px;line-height:1.5}
+@media(max-width:1100px){.layout{grid-template-columns:1fr}.groups{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.toolbar{grid-template-columns:1fr 1fr}.score{grid-column:auto}.groups{grid-template-columns:1fr}.student-list{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kurswahl-Challenge</h1>
+  <div class="subtitle">
+    Es gibt 6 mögliche Kurse, aber nur 4 dürfen stattfinden. Öffne vier Kurse und verteile die 24 Schülerinnen und Schüler so,
+    dass die Gesamtzufriedenheit maximal wird. Jeder geöffnete Kurs muss dabei mindestens 5 und höchstens 7 Schülerinnen und Schüler haben.
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="toolbar">
+    <div class="card score">
+      <div class="kicker">Dein aktueller Gesamtscore</div>
+      <div class="big"><span id="score">0</span> Punkte</div>
+    </div>
+    <div class="card score">
+      <div class="kicker">Deine Zeit</div>
+      <div class="big" id="timer">00:00.0</div>
+    </div>
+    <button class="btn secondary" id="reset">Zurücksetzen</button>
+    <button class="btn" id="compare" disabled>Mit Solver vergleichen</button>
+  </div>
+
+  <div class="layout">
+    <aside class="card panel">
+      <h2>1. Kurse auswählen</h2>
+      <div class="info">
+        Wähle genau <b>4 von 6 Kursen</b>.
+      </div>
+      <div class="course-select" id="courseSelect"></div>
+
+      <h2>2. Schüler zuordnen</h2>
+      <div class="info">
+        Jede Person hat drei Präferenzen: 1. Wunsch = 8–10 Punkte, 2. Wunsch = 5–7 Punkte, 3. Wunsch = 1–4 Punkte. Ziehe die Karten in die geöffneten Kurse.
+      </div>
+      <div class="student-list" id="studentList"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">
+        Bereits zugeordnete Schüler können jederzeit zurück in den Schülerpool gezogen werden.
+      </div>
+    </aside>
+
+    <main class="card panel">
+      <h2>Geöffnete Kurse</h2>
+      <div class="groups" id="groups"></div>
+
+      <div class="metrics">
+        <div class="metric"><span>Ø Zufriedenheit</span><b id="avg">0.0</b></div>
+        <div class="metric"><span>Erfüllte Erstwünsche</span><b id="firstFulfilled">0</b></div>
+        <div class="metric"><span>Erfüllte Zweitwünsche</span><b id="secondFulfilled">0</b></div>
+        <div class="metric"><span>Erfüllte Drittwünsche</span><b id="thirdFulfilled">0</b></div>
+      </div>
+      <div class="message" id="message">Wähle zuerst vier Kurse aus.</div>
+    </main>
+  </div>
+
+  <section class="result" id="result">
+    <h2 style="margin:0">Mensch vs. Solver</h2>
+    <div class="compare">
+      <div class="compare-card">
+        <div class="kicker" style="color:#98a2b3">Deine Lösung</div>
+        <div class="compare-score" id="humanScore">–</div>
+        <div id="humanDesc" style="color:#d0d5dd;font-size:13px"></div>
+        <div id="humanTime" style="color:#98a2b3;font-size:12px;margin-top:6px"></div>
+      </div>
+      <div class="compare-card">
+        <div class="kicker" style="color:#98a2b3">Optimale Lösung</div>
+        <div class="compare-score" id="solverScore">–</div>
+        <div id="solverDesc" style="color:#d0d5dd;font-size:13px"></div>
+        <div id="solverTime" style="color:#98a2b3;font-size:12px;margin-top:6px"></div>
+      </div>
+    </div>
+
+    <h3>Vom Solver geöffnete Kurse</h3>
+    <div class="solver-course-row" id="solverCourses"></div>
+
+    <h3>Optimale Zuordnung</h3>
+    <div class="solver-groups" id="solverGroups"></div>
+
+    <div class="explain">
+      Der Solver entscheidet gleichzeitig <b>welche Kurse stattfinden</b> und <b>wer welchem Kurs zugeordnet wird</b>.
+      Genau dadurch entsteht die Schwierigkeit: Eine gute Kursauswahl isoliert betrachtet muss nicht zur besten Gesamtlösung führen.
+    </div>
+  </section>
+</div>
+
+<script>
+const COURSES = [
+  {id:"A",name:"Robotik"},
+  {id:"B",name:"Medien"},
+  {id:"C",name:"Umwelt"},
+  {id:"D",name:"Wirtschaft"},
+  {id:"E",name:"Design"},
+  {id:"F",name:"Sport & Gesundheit"}
+];
+
+// Intentionally overlapping preferences. No course is universally best;
+// several students have near-ties, while others are highly inflexible.
+const students = [
+ {id:"S1",name:"Anna",p:{A:6,B:0,C:10,D:2,E:8,F:0}},
+ {id:"S2",name:"Ben",p:{A:0,B:9,C:6,D:0,E:4,F:0}},
+ {id:"S3",name:"Clara",p:{A:8,B:0,C:3,D:6,E:0,F:0}},
+ {id:"S4",name:"David",p:{A:0,B:5,C:0,D:2,E:10,F:0}},
+ {id:"S5",name:"Elif",p:{A:9,B:0,C:0,D:4,E:6,F:0}},
+ {id:"S6",name:"Finn",p:{A:0,B:7,C:2,D:10,E:0,F:0}},
+ {id:"S7",name:"Greta",p:{A:0,B:1,C:6,D:0,E:0,F:9}},
+ {id:"S8",name:"Hassan",p:{A:5,B:10,C:0,D:0,E:3,F:0}},
+
+ {id:"S9",name:"Ida",p:{A:0,B:0,C:9,D:5,E:0,F:2}},
+ {id:"S10",name:"Jonas",p:{A:7,B:0,C:0,D:10,E:3,F:0}},
+ {id:"S11",name:"Kira",p:{A:0,B:8,C:0,D:2,E:6,F:0}},
+ {id:"S12",name:"Leon",p:{A:2,B:0,C:7,D:0,E:0,F:10}},
+ {id:"S13",name:"Mia",p:{A:0,B:5,C:0,D:8,E:10,F:0}},
+ {id:"S14",name:"Noah",p:{A:10,B:6,C:0,D:0,E:3,F:0}},
+ {id:"S15",name:"Olivia",p:{A:0,B:6,C:10,D:3,E:0,F:0}},
+ {id:"S16",name:"Paul",p:{A:5,B:0,C:0,D:9,E:2,F:0}},
+
+ {id:"S17",name:"Quinn",p:{A:0,B:10,C:0,D:3,E:0,F:6}},
+ {id:"S18",name:"Romy",p:{A:8,B:0,C:6,D:0,E:2,F:0}},
+ {id:"S19",name:"Sam",p:{A:0,B:5,C:0,D:8,E:0,F:10}},
+ {id:"S20",name:"Tara",p:{A:6,B:0,C:9,D:0,E:0,F:4}},
+ {id:"S21",name:"Umut",p:{A:0,B:7,C:0,D:3,E:10,F:0}},
+ {id:"S22",name:"Vera",p:{A:8,B:0,C:5,D:0,E:0,F:10}},
+ {id:"S23",name:"Willi",p:{A:0,B:0,C:4,D:9,E:7,F:0}},
+ {id:"S24",name:"Yara",p:{A:10,B:5,C:0,D:0,E:2,F:0}}
+];
+
+let openCourses=[];
+let assign={};
+let dragId=null;
+
+let timerStarted=false;
+let timerStart=0;
+let timerInterval=null;
+let finalHumanTimeMs=null;
+
+function formatTime(ms){
+  const totalTenths=Math.floor(ms/100);
+  const minutes=Math.floor(totalTenths/600);
+  const seconds=Math.floor((totalTenths%600)/10);
+  const tenths=totalTenths%10;
+  return `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}.${tenths}`;
+}
+
+function startTimer(){
+  if(timerStarted) return;
+  timerStarted=true;
+  timerStart=performance.now();
+  timerInterval=setInterval(()=>{
+    document.getElementById("timer").textContent=formatTime(performance.now()-timerStart);
+  },100);
+}
+
+function stopTimer(){
+  if(!timerStarted) return;
+  finalHumanTimeMs=performance.now()-timerStart;
+  clearInterval(timerInterval);
+  timerInterval=null;
+  document.getElementById("timer").textContent=formatTime(finalHumanTimeMs);
+}
+
+function resetTimer(){
+  if(timerInterval) clearInterval(timerInterval);
+  timerStarted=false;
+  timerStart=0;
+  timerInterval=null;
+  finalHumanTimeMs=null;
+  document.getElementById("timer").textContent="00:00.0";
+}
+
+function courseName(id){return COURSES.find(c=>c.id===id).name}
+
+function rankedPrefs(s){
+  return Object.entries(s.p)
+    .filter(([cid,v])=>v>0)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,3);
+}
+
+function studentCard(s){
+  const el=document.createElement("div");
+  el.className="student";el.draggable=true;el.dataset.id=s.id;
+  const prefs=rankedPrefs(s);
+  const assignedCourse=assign[s.id] || null;
+
+  el.innerHTML=`<div class="name">${s.name}</div>
+    <div class="prefrow">${
+      prefs.map(([cid,v])=>{
+        const rank = prefs.findIndex(x=>x[0]===cid)+1;
+        const used = assignedCourse===cid ? "used" : "";
+        return `<span class="badge ${used}">${rank}. ${courseName(cid)}: ${v}</span>`;
+      }).join("")
+    }</div>`;
+
+  el.addEventListener("dragstart",()=>{startTimer();dragId=s.id;el.classList.add("dragging")});
+  el.addEventListener("dragend",()=>{dragId=null;el.classList.remove("dragging")});
+  return el;
+}
+
+function initCourseButtons(){
+  const host=document.getElementById("courseSelect");host.innerHTML="";
+  COURSES.forEach(c=>{
+    const b=document.createElement("button");b.className="course-btn";b.dataset.id=c.id;
+    b.innerHTML=`<b>${c.name}</b><span>anklicken zum Öffnen</span>`;
+    b.addEventListener("click",()=>{
+      startTimer();
+      if(openCourses.includes(c.id)){
+        openCourses=openCourses.filter(x=>x!==c.id);
+        for(const sid of Object.keys(assign)) if(assign[sid]===c.id) delete assign[sid];
+      } else {
+        if(openCourses.length>=4)return;
+        openCourses.push(c.id);
+      }
+      render();
+    });
+    host.appendChild(b);
+  });
+}
+
+function initStudentPoolDropZone(){
+  const pool=document.getElementById("studentList");
+  pool.addEventListener("dragover",e=>{
+    e.preventDefault();
+    pool.classList.add("over");
+  });
+  pool.addEventListener("dragleave",()=>pool.classList.remove("over"));
+  pool.addEventListener("drop",e=>{
+    e.preventDefault();
+    pool.classList.remove("over");
+    if(!dragId) return;
+    if(assign[dragId]){
+      delete assign[dragId];
+      render();
+    }
+  });
+}
+
+function buildGroups(){
+  const host=document.getElementById("groups");host.innerHTML="";
+  openCourses.forEach(cid=>{
+    const box=document.createElement("div");box.className="group";box.dataset.course=cid;
+    box.innerHTML=`<div class="group-head"><div><div class="group-title">${courseName(cid)}</div><div class="group-meta"><b>5–7 Schüler</b></div></div><div class="capacity count">0/7</div></div>`;
+    box.addEventListener("dragover",e=>{e.preventDefault();box.classList.add("over")});
+    box.addEventListener("dragleave",()=>box.classList.remove("over"));
+    box.addEventListener("drop",e=>{
+      e.preventDefault();box.classList.remove("over");
+      if(!dragId)return;
+      const n=Object.values(assign).filter(x=>x===cid).length;
+      const old=assign[dragId];
+      if(n>=7 && old!==cid)return;
+      assign[dragId]=cid;render();
+    });
+    host.appendChild(box);
+  });
+}
+
+function scoreOf(a){
+  let score=0,count=0,first=0,second=0,third=0;
+  for(const s of students){
+    const g=a[s.id]; if(!g)continue;
+    const v=s.p[g];score+=v;count++;
+    const prefs=rankedPrefs(s);
+    const rank=prefs.findIndex(x=>x[0]===g);
+    if(rank===0) first++;
+    else if(rank===1) second++;
+    else if(rank===2) third++;
+  }
+  return {score,count,first,second,third,avg:count?score/count:0};
+}
+
+function validComplete(){
+  if(openCourses.length!==4)return false;
+  if(Object.keys(assign).length!==students.length)return false;
+  return openCourses.every(c=>{
+    const n=Object.values(assign).filter(x=>x===c).length;
+    return n>=5&&n<=7;
+  });
+}
+
+function render(){
+  document.querySelectorAll(".course-btn").forEach(b=>b.classList.toggle("active",openCourses.includes(b.dataset.id)));
+  buildGroups();
+
+  const list=document.getElementById("studentList");list.innerHTML="";
+  students.forEach(s=>{
+    if(assign[s.id] && openCourses.includes(assign[s.id])){
+      const box=document.querySelector(`.group[data-course="${assign[s.id]}"]`);
+      if(box)box.appendChild(studentCard(s));
+    } else {
+      if(assign[s.id] && !openCourses.includes(assign[s.id])) delete assign[s.id];
+      list.appendChild(studentCard(s));
+    }
+  });
+
+  document.querySelectorAll(".group").forEach(g=>{
+    const n=Object.values(assign).filter(x=>x===g.dataset.course).length;
+    g.querySelector(".count").textContent=`${n}/7`;
+  });
+
+  const sc=scoreOf(assign);
+  document.getElementById("score").textContent=sc.score;
+  document.getElementById("avg").textContent=sc.avg.toFixed(1);
+  document.getElementById("firstFulfilled").textContent=sc.first;
+  document.getElementById("secondFulfilled").textContent=sc.second;
+  document.getElementById("thirdFulfilled").textContent=sc.third;
+
+  const msg=document.getElementById("message");
+  const complete=validComplete();
+  document.getElementById("compare").disabled=!complete;
+
+  if(openCourses.length<4){
+    msg.className="message";
+    msg.textContent=`Wähle noch ${4-openCourses.length} Kurs${4-openCourses.length===1?"":"e"} aus.`;
+  } else if(Object.keys(assign).length<24){
+    msg.className="message";
+    msg.textContent="Verteile jetzt alle Schülerinnen und Schüler auf die vier geöffneten Kurse.";
+  } else if(!complete){
+    const bad=openCourses.map(c=>[c,Object.values(assign).filter(x=>x===c).length]).filter(x=>x[1]<5||x[1]>7);
+    msg.className="message warn";
+    msg.textContent="Noch nicht zulässig: "+bad.map(x=>`${courseName(x[0])} hat ${x[1]} Personen`).join(", ");
+  } else {
+    msg.className="message good";
+    msg.textContent="✓ Zulässige Gesamtlösung. Jetzt kannst du mit dem Solver vergleichen.";
+  }
+}
+
+document.getElementById("reset").addEventListener("click",()=>{
+  openCourses=[];assign={};resetTimer();document.getElementById("result").classList.remove("show");render();
+});
+
+// For a fixed set of four open courses, solve assignment exactly by DP over capacities.
+// Then enumerate all C(6,4)=15 course selections.
+function solveFixed(open){
+  const memo=new Map();
+  function rec(i,caps){
+    if(i===students.length){
+      if(caps.every(x=>x>=5&&x<=7)) return {score:0,path:[]};
+      return {score:-1e9,path:[]};
+    }
+    const key=i+"|"+caps.join(",");
+    if(memo.has(key))return memo.get(key);
+
+    let best={score:-1e9,path:[]};
+    for(let gi=0;gi<open.length;gi++){
+      if(caps[gi]>=7)continue;
+      const nc=caps.slice();nc[gi]++;
+      const nxt=rec(i+1,nc);
+      const val=students[i].p[open[gi]]+nxt.score;
+      if(val>best.score)best={score:val,path:[open[gi],...nxt.path]};
+    }
+    memo.set(key,best);return best;
+  }
+  const res=rec(0,[0,0,0,0]);
+  const a={};students.forEach((s,i)=>a[s.id]=res.path[i]);
+  return {score:res.score,assign:a};
+}
+
+function combinations(arr,k,start=0,prefix=[],out=[]){
+  if(prefix.length===k){out.push(prefix.slice());return out}
+  for(let i=start;i<=arr.length-(k-prefix.length);i++){
+    prefix.push(arr[i]);combinations(arr,k,i+1,prefix,out);prefix.pop();
+  }
+  return out;
+}
+
+function solveOptimal(){
+  let best={score:-1e9,open:null,assign:null};
+  for(const open of combinations(COURSES.map(c=>c.id),4)){
+    const sol=solveFixed(open);
+    if(sol.score>best.score)best={score:sol.score,open:open.slice(),assign:sol.assign};
+  }
+  return best;
+}
+
+document.getElementById("compare").addEventListener("click",()=>{
+  stopTimer();
+  const human=scoreOf(assign);
+  const solverStart=performance.now();
+  const sol=solveOptimal();
+  const solverTimeMs=performance.now()-solverStart;
+  document.getElementById("humanScore").textContent=`${human.score} Punkte`;
+  document.getElementById("solverScore").textContent=`${sol.score} Punkte`;
+  document.getElementById("humanDesc").textContent=
+    `Ø ${human.avg.toFixed(1)} · ${human.first} Erstwünsche · ${human.second} Zweitwünsche · ${human.third} Drittwünsche`;
+  document.getElementById("humanTime").textContent=`Benötigte Zeit: ${formatTime(finalHumanTimeMs || 0)}`;
+  const gap=sol.score-human.score;
+  document.getElementById("solverDesc").textContent=
+    gap===0?"Du hast tatsächlich das globale Optimum gefunden.":`Der Solver findet ${gap} Punkte mehr.`;
+  document.getElementById("solverTime").textContent=`Solver-Zeit: ${solverTimeMs.toFixed(1)} ms`;
+
+  const row=document.getElementById("solverCourses");row.innerHTML="";
+  sol.open.forEach(c=>{
+    const p=document.createElement("div");p.className="solver-pill";p.textContent=courseName(c);row.appendChild(p);
+  });
+
+  const host=document.getElementById("solverGroups");host.innerHTML="";
+  sol.open.forEach(c=>{
+    const box=document.createElement("div");box.className="solver-group";
+    const mem=students.filter(s=>sol.assign[s.id]===c);
+    box.innerHTML=`<h4>${courseName(c)} · ${mem.length}</h4>`+
+      mem.map(s=>`<div class="solver-name">${s.name} · ${s.p[c]} Punkte</div>`).join("");
+    host.appendChild(box);
+  });
+
+  document.getElementById("result").classList.add("show");
+  document.getElementById("result").scrollIntoView({behavior:"smooth",block:"start"});
+});
+
+initCourseButtons();
+initStudentPoolDropZone();
+render();
+</script>
+</body>
+</html>
