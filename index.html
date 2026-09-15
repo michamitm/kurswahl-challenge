@@ -34,12 +34,48 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
 .course-btn span{font-size:11px;color:var(--muted)}
 .student-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:620px;overflow:auto;padding:8px;border:2px dashed transparent;border-radius:14px;transition:.15s}
 .student-list.over{border-color:var(--accent);background:#eef3ff}
-.student{border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:12px;padding:9px 10px;background:#fff;cursor:grab;user-select:none}
+.student{position:relative;border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:12px;padding:9px 10px;background:#fff;cursor:grab;user-select:none}
 .student.dragging{opacity:.45}
 .student.selected{outline:3px solid var(--accent);background:var(--soft)}
 .student-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.remove-btn{display:none;border:0;background:#f2f4f7;color:#667085;border-radius:999px;width:26px;height:26px;font-size:17px;line-height:26px;text-align:center;cursor:pointer;padding:0}
-.group .remove-btn{display:inline-block}
+.remove-btn{
+  display:none;
+  position:absolute;
+  top:6px;
+  right:6px;
+  z-index:5;
+  border:1px solid #d0d5dd;
+  background:#fff;
+  color:#475467;
+  border-radius:999px;
+  width:30px;
+  height:30px;
+  font-size:20px;
+  line-height:26px;
+  text-align:center;
+  cursor:pointer;
+  padding:0;
+  box-shadow:0 2px 6px rgba(16,24,40,.12)
+}
+.group .remove-btn{
+  display:none;
+  position:absolute;
+  top:6px;
+  right:6px;
+  z-index:5;
+  border:1px solid #d0d5dd;
+  background:#fff;
+  color:#475467;
+  border-radius:999px;
+  width:30px;
+  height:30px;
+  font-size:20px;
+  line-height:26px;
+  text-align:center;
+  cursor:pointer;
+  padding:0;
+  box-shadow:0 2px 6px rgba(16,24,40,.12)
+}
 .remove-btn:hover{background:#e4e7ec;color:#344054}
 .name{font-weight:850}
 .prefrow{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
@@ -108,6 +144,16 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
   .solver-groups{grid-template-columns:1fr}
   .student{padding:11px 12px;touch-action:manipulation}
   .course-btn{min-height:54px}
+  .group .student{padding-right:44px}
+  .group .remove-btn{
+    display:block !important;
+    width:34px;
+    height:34px;
+    font-size:22px;
+    line-height:30px;
+    top:7px;
+    right:7px;
+  }
 }
 
 </style>
