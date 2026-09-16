@@ -87,6 +87,8 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
 .compare-score{font-size:36px;font-weight:900;margin-top:3px}
 .solver-course-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .solver-pill{padding:7px 10px;border-radius:999px;background:#25304a;color:#fff;font-size:12px}
+.solver-pill.correct{background:#177245}
+.solver-pill.wrong{background:#b42318}
 .solver-groups{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
 .solver-group{background:#172033;border:1px solid #344054;border-radius:12px;padding:11px}
 .solver-group h4{margin:0 0 8px}
@@ -146,7 +148,7 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
 <header>
   <h1>Kurswahl-Challenge</h1>
   <div class="subtitle">
-    Es gibt 6 mögliche Kurse, aber nur 4 dürfen stattfinden. Öffne vier Kurse und verteile die 24 Schülerinnen und Schüler so,
+    Es gibt 6 mögliche Kurse, aber nur 4 dürfen stattfinden. Öffne 4 Kurse und verteile die 24 Schülerinnen und Schüler so,
     dass die Gesamtzufriedenheit maximal wird. Jeder geöffnete Kurs muss dabei mindestens 5 und höchstens 7 Schülerinnen und Schüler haben.
   </div>
 </header>
@@ -173,9 +175,10 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
       </div>
       <div class="course-select" id="courseSelect"></div>
 
-      <h2>2. Schüler zuordnen</h2>
+      <h2>2. SchülerInnen zuordnen</h2>
       <div class="info">
-        Jede Person hat drei Präferenzen: 1. Wunsch = 8–10 Punkte, 2. Wunsch = 5–7 Punkte, 3. Wunsch = 1–4 Punkte. Ziehe die Karten in die geöffneten Kurse.
+        Jede Person hat drei Präferenzen abgegeben.<br>
+		Ziehe die SchülerInnen in die geöffneten Kurse.
       </div>
       <div class="student-list" id="studentList"></div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px">
@@ -185,14 +188,7 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
 
     <main class="card panel">
       <h2>Geöffnete Kurse</h2>
-      <div class="groups" id="groups"></div>
-
-      <div class="metrics">
-        <div class="metric"><span>Ø Zufriedenheit</span><b id="avg">0.0</b></div>
-        <div class="metric"><span>Erfüllte Erstwünsche</span><b id="firstFulfilled">0</b></div>
-        <div class="metric"><span>Erfüllte Zweitwünsche</span><b id="secondFulfilled">0</b></div>
-        <div class="metric"><span>Erfüllte Drittwünsche</span><b id="thirdFulfilled">0</b></div>
-      </div>
+      <div class="groups" id="groups"></div>      
       <div class="message" id="message">Wähle zuerst vier Kurse aus.</div>
     </main>
   </div>
@@ -203,26 +199,27 @@ h1{margin:0;font-size:clamp(28px,3.5vw,46px);letter-spacing:-.035em}
       <div class="compare-card">
         <div class="kicker" style="color:#98a2b3">Deine Lösung</div>
         <div class="compare-score" id="humanScore">–</div>
-        <div id="humanDesc" style="color:#d0d5dd;font-size:13px"></div>
-        <div id="humanTime" style="color:#98a2b3;font-size:12px;margin-top:6px"></div>
+        <div id="humanTime" style="color:#d0d5dd;font-size:13px;margin-top:6px"></div>
       </div>
       <div class="compare-card">
         <div class="kicker" style="color:#98a2b3">Optimale Lösung</div>
         <div class="compare-score" id="solverScore">–</div>
-        <div id="solverDesc" style="color:#d0d5dd;font-size:13px"></div>
-        <div id="solverTime" style="color:#98a2b3;font-size:12px;margin-top:6px"></div>
+        <div id="solverTime" style="color:#d0d5dd;font-size:13px"></div>
+        <div id="solverComparison" style="color:#98a2b3;font-size:12px;margin-top:6px"></div>
       </div>
     </div>
 
-    <h3>Vom Solver geöffnete Kurse</h3>
+    <h3>Kursauswahl im Vergleich</h3>
+    <div style="margin-bottom:8px;font-size:13px;color:#d0d5dd">Deine geöffneten Kurse</div>
+    <div class="solver-course-row" id="humanCourses"></div>
+
+    <div style="margin-top:12px;margin-bottom:8px;font-size:13px;color:#d0d5dd">Vom Solver geöffnete Kurse</div>
     <div class="solver-course-row" id="solverCourses"></div>
 
     <h3>Optimale Zuordnung</h3>
     <div class="solver-groups" id="solverGroups"></div>
 
-    <div class="explain">
-      Der Solver entscheidet gleichzeitig <b>welche Kurse stattfinden</b> und <b>wer welchem Kurs zugeordnet wird</b>.
-      Genau dadurch entsteht die Schwierigkeit: Eine gute Kursauswahl isoliert betrachtet muss nicht zur besten Gesamtlösung führen.
+    <div class="explain">      
     </div>
   </section>
 </div>
@@ -333,10 +330,9 @@ function studentCard(s){
     </div>
     <div class="prefrow">${
       prefs.map(([cid,v])=>{
-        const rank = prefs.findIndex(x=>x[0]===cid)+1;
-        const used = assignedCourse===cid ? "used" : "";
-        return `<span class="badge ${used}">${rank}. ${courseName(cid)}: ${v}</span>`;
-      }).join("")
+  const used = assignedCourse===cid ? "used" : "";
+  return `<span class="badge ${used}">${courseName(cid)}: ${v}</span>`;
+}).join("")
     }</div>`;
 
   el.addEventListener("dragstart",()=>{startTimer();dragId=s.id;el.classList.add("dragging")});
@@ -364,7 +360,7 @@ function studentCard(s){
 
 function initCourseButtons(){
   const host=document.getElementById("courseSelect");host.innerHTML="";
-  COURSES.forEach(c=>{
+  [...COURSES].sort((a,b)=>a.name.localeCompare(b.name,"de")).forEach(c=>{
     const b=document.createElement("button");b.className="course-btn";b.dataset.id=c.id;
     b.innerHTML=`<b>${c.name}</b><span>anklicken zum Öffnen</span>`;
     b.addEventListener("click",()=>{
@@ -485,11 +481,7 @@ function render(){
   });
 
   const sc=scoreOf(assign);
-  document.getElementById("score").textContent=sc.score;
-  document.getElementById("avg").textContent=sc.avg.toFixed(1);
-  document.getElementById("firstFulfilled").textContent=sc.first;
-  document.getElementById("secondFulfilled").textContent=sc.second;
-  document.getElementById("thirdFulfilled").textContent=sc.third;
+  document.getElementById("score").textContent=sc.score;  
 
   const msg=document.getElementById("message");
   const complete=validComplete();
@@ -504,7 +496,7 @@ function render(){
   } else if(!complete){
     const bad=openCourses.map(c=>[c,Object.values(assign).filter(x=>x===c).length]).filter(x=>x[1]<5||x[1]>7);
     msg.className="message warn";
-    msg.textContent="Noch nicht zulässig: "+bad.map(x=>`${courseName(x[0])} hat ${x[1]} Personen`).join(", ");
+    msg.textContent="Noch nicht zulässig: "+bad.map(x=>`${courseName(x[0])} hat nur ${x[1]} Personen`).join(", ");
   } else {
     msg.className="message good";
     msg.textContent="✓ Zulässige Gesamtlösung. Jetzt kannst du mit dem Solver vergleichen.";
@@ -567,27 +559,49 @@ document.getElementById("compare").addEventListener("click",()=>{
   const solverTimeMs=performance.now()-solverStart;
   document.getElementById("humanScore").textContent=`${human.score} Punkte`;
   document.getElementById("solverScore").textContent=`${sol.score} Punkte`;
-  document.getElementById("humanDesc").textContent=
-    `Ø ${human.avg.toFixed(1)} · ${human.first} Erstwünsche · ${human.second} Zweitwünsche · ${human.third} Drittwünsche`;
-  document.getElementById("humanTime").textContent=`Benötigte Zeit: ${formatTime(finalHumanTimeMs || 0)}`;
+  document.getElementById("humanTime").textContent = `Benötigte Zeit: ${((finalHumanTimeMs || 0) / 1000).toFixed(1)} s`;
   const gap=sol.score-human.score;
-  document.getElementById("solverDesc").textContent=
-    gap===0?"Du hast tatsächlich das globale Optimum gefunden.":`Der Solver findet ${gap} Punkte mehr.`;
-  document.getElementById("solverTime").textContent=`Solver-Zeit: ${solverTimeMs.toFixed(1)} ms`;
+  const speedFactor=(finalHumanTimeMs || 0)/solverTimeMs;
+  document.getElementById("solverTime").textContent = `Solver-Zeit: ${(solverTimeMs / 1000).toFixed(3)} s`;
+  document.getElementById("solverComparison").textContent=
+    gap===0
+      ? `Du hast tatsächlich das globale Optimum gefunden. Der Solver war ${speedFactor.toFixed(0)}× schneller.`
+      : `Der Solver findet ${gap} Punkte mehr und war ${speedFactor.toFixed(0)}× schneller.`;
 
-  const row=document.getElementById("solverCourses");row.innerHTML="";
-  sol.open.forEach(c=>{
-    const p=document.createElement("div");p.className="solver-pill";p.textContent=courseName(c);row.appendChild(p);
-  });
+  const humanRow=document.getElementById("humanCourses");
+  humanRow.innerHTML="";
+  [...openCourses]
+    .sort((a,b)=>courseName(a).localeCompare(courseName(b),"de"))
+    .forEach(c=>{
+      const p=document.createElement("div");
+      p.className="solver-pill "+(sol.open.includes(c)?"correct":"wrong");
+      p.textContent=courseName(c);
+      humanRow.appendChild(p);
+    });
+
+  const row=document.getElementById("solverCourses");
+  row.innerHTML="";
+  [...sol.open]
+    .sort((a,b)=>courseName(a).localeCompare(courseName(b),"de"))
+    .forEach(c=>{
+      const p=document.createElement("div");
+      p.className="solver-pill";
+      p.textContent=courseName(c);
+      row.appendChild(p);
+    });
 
   const host=document.getElementById("solverGroups");host.innerHTML="";
-  sol.open.forEach(c=>{
-    const box=document.createElement("div");box.className="solver-group";
-    const mem=students.filter(s=>sol.assign[s.id]===c);
-    box.innerHTML=`<h4>${courseName(c)} · ${mem.length}</h4>`+
-      mem.map(s=>`<div class="solver-name">${s.name} · ${s.p[c]} Punkte</div>`).join("");
-    host.appendChild(box);
-  });
+  [...sol.open]
+    .sort((a,b)=>courseName(a).localeCompare(courseName(b),"de"))
+    .forEach(c=>{
+      const box=document.createElement("div");box.className="solver-group";
+      const mem=students
+        .filter(s=>sol.assign[s.id]===c)
+        .sort((a,b)=>a.name.localeCompare(b.name,"de"));
+      box.innerHTML=`<h4>${courseName(c)} · ${mem.length}</h4>`+
+        mem.map(s=>`<div class="solver-name">${s.name} · ${s.p[c]} Punkte</div>`).join("");
+      host.appendChild(box);
+    });
 
   document.getElementById("result").classList.add("show");
   document.getElementById("result").scrollIntoView({behavior:"smooth",block:"start"});
